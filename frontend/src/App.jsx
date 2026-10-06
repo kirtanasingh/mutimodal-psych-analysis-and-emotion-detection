@@ -1,122 +1,34 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import Sidebar from './components/Sidebar'
+import PatientProfile from './pages/PatientProfile'
+import Patients from './pages/Patients'
+import NewSession from './pages/NewSession'
+import SessionProfile from './pages/SessionProfile'
+import { apiRequest } from './services/api'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function Login() {
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('psychologist@example.com')
+  const [password, setPassword] = useState('devpassword123')
+  const [error, setError] = useState('')
+  async function submit(event) {
+    event.preventDefault()
+    try {
+      const result = await apiRequest('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+      localStorage.setItem('access_token', result.access_token)
+      navigate('/patients')
+    } catch (err) { setError(err.message) }
+  }
+  return <main className="login"><form className="modal login-card" onSubmit={submit}><span className="eyebrow">Clinical Workspace</span><h1>Sign in</h1><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>{error && <p className="error">{error}</p>}<button className="button primary">Sign in</button></form></main>
 }
 
-export default App
+function ProtectedLayout() {
+  return <><Sidebar /><Routes><Route path="/" element={<main className="page"><h1>Dashboard</h1><p className="muted">Dashboard placeholder.</p></main>} /><Route path="/patients" element={<Patients />} /><Route path="/patients/:id" element={<PatientProfile />} /><Route path="/sessions/new" element={<NewSession />} /><Route path="/sessions/:id" element={<SessionProfile />} /><Route path="*" element={<Navigate to="/patients" replace />} /></Routes></>
+}
+
+export default function App() {
+  const [authenticated] = useState(() => Boolean(localStorage.getItem('access_token')))
+  return <BrowserRouter>{authenticated ? <ProtectedLayout /> : <Routes><Route path="*" element={<Login />} /></Routes>}</BrowserRouter>
+}

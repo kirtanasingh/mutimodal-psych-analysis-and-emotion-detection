@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,6 +14,7 @@ class UserRole(str, enum.Enum):
 
 
 class SessionStatus(str, enum.Enum):
+    created = "created"
     uploaded = "uploaded"
     processing = "processing"
     analysis_complete = "analysis_complete"
@@ -63,6 +64,7 @@ class User(TimestampMixin, Base):
 
 class Patient(TimestampMixin, Base):
     __tablename__ = "patients"
+    __table_args__ = (UniqueConstraint("psychologist_id", "display_id", name="uq_patients_psychologist_display_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     psychologist_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
@@ -82,7 +84,7 @@ class Session(TimestampMixin, Base):
     session_type: Mapped[str] = mapped_column(String(100), nullable=False)
     duration_seconds: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[SessionStatus] = mapped_column(
-        Enum(SessionStatus, name="session_status"), default=SessionStatus.uploaded, nullable=False
+        Enum(SessionStatus, name="session_status"), default=SessionStatus.created, nullable=False
     )
     consent_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
