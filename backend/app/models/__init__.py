@@ -1,0 +1,33 @@
+from app.models.clinical import (
+    AudioFeature,
+    ClinicianNote,
+    EmotionPrediction,
+    FacialAnalysis,
+    FusionResult,
+    ImportantMoment,
+    Patient,
+    Report,
+    Session,
+    SignalDivergence,
+    Transcript,
+    TranscriptSegment,
+    UploadedVideo,
+    User,
+)
+
+__all__ = [
+    "AudioFeature",
+    "ClinicianNote",
+    "EmotionPrediction",
+    "FacialAnalysis",
+    "FusionResult",
+    "ImportantMoment",
+    "Patient",
+    "Report",
+    "Session",
+    "SignalDivergence",
+    "Transcript",
+    "TranscriptSegment",
+    "UploadedVideo",
+    "User",
+]

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+
+# Uploaded session videos
+uploads/*
+!uploads/.gitkeep
+
+# Generated reports
+reports/*
+!reports/.gitkeep
+
+# ML model files
+models/*.pt
+models/*.pkl
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
