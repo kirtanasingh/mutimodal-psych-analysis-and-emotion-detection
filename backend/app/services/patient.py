@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.clinical import Patient, Session as ClinicalSession
-from app.schemas.patient import PatientCreate
+from app.schemas.patient import PatientCreate, PatientUpdate
 
 
 def _generate_display_id(db: Session, psychologist_id: int) -> str:
@@ -37,10 +37,15 @@ def _add_session_summary(db: Session, patient: Patient) -> Patient:
 
 
 def create_patient(db: Session, psychologist_id: int, data: PatientCreate) -> Patient:
+    info = dict(data.basic_info_json or {})
+    for field in ("full_name", "age", "profession"):
+        value = getattr(data, field)
+        if value is not None:
+            info[field] = value
     patient = Patient(
         psychologist_id=psychologist_id,
         display_id=_generate_display_id(db, psychologist_id),
-        basic_info_json=data.basic_info_json,
+        basic_info_json=info or None,
     )
     db.add(patient)
     db.commit()
@@ -68,4 +73,21 @@ def get_patient(db: Session, psychologist_id: int, patient_id: int) -> Patient:
     )
     if patient is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+    return _add_session_summary(db, patient)
+
+
+def update_patient(db: Session, psychologist_id: int, patient_id: int, data: PatientUpdate) -> Patient:
+    patient = get_patient(db, psychologist_id, patient_id)
+    info = dict(patient.basic_info_json or {})
+    for field in data.model_fields_set:
+        if field not in ("full_name", "age", "profession"):
+            continue
+        value = getattr(data, field)
+        if value is None:
+            info.pop(field, None)
+        else:
+            info[field] = value
+    patient.basic_info_json = info or None
+    db.commit()
+    db.refresh(patient)
     return _add_session_summary(db, patient)

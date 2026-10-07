@@ -13,6 +13,8 @@ dist/
 # Uploaded session videos
 uploads/*
 !uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
 
 # Generated reports
 reports/*

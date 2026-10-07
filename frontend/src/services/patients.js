@@ -14,3 +14,14 @@ export function listPatients() {
 export function getPatient(id) {
   return apiRequest(`/api/patients/${id}`)
 }
+
+export function updatePatient(id, data) {
+  return apiRequest(`/api/patients/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export function comparePatientSessions(patientId, sessionA, sessionB) {
+  return apiRequest(`/api/patients/${patientId}/sessions/compare?session_a=${sessionA}&session_b=${sessionB}`)
+}

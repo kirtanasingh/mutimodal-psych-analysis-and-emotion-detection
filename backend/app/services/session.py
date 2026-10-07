@@ -12,6 +12,17 @@ from app.schemas.session import SessionCreate
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".webm", ".mkv"}
 
 
+def _initial_processing_steps() -> dict[str, bool]:
+    return {
+        "video_uploaded": False,
+        "audio_extracted": False,
+        "frames_extracted": False,
+        "transcript_generated": False,
+        "emotion_analysis_complete": False,
+        "fusion_complete": False,
+    }
+
+
 def _owned_patient(db: Session, psychologist_id: int, patient_id: int) -> Patient:
     patient = db.scalar(
         select(Patient).where(
@@ -33,6 +44,7 @@ def create_session(db: Session, psychologist_id: int, data: SessionCreate) -> Cl
         consent_confirmed=data.consent_confirmed,
         notes=data.notes,
         status=SessionStatus.created,
+        processing_steps=_initial_processing_steps(),
     )
     db.add(session)
     db.commit()
@@ -105,6 +117,8 @@ def upload_video(
             file_path=str(destination),
             original_filename=video.filename or "original_video.mp4",
         )
+    session.processing_steps = {**_initial_processing_steps(), "video_uploaded": True}
+    session.processing_error = None
     session.status = SessionStatus.uploaded
     db.commit()
     db.refresh(session)

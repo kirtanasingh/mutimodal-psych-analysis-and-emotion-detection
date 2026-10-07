@@ -16,9 +16,16 @@ class UserRole(str, enum.Enum):
 class SessionStatus(str, enum.Enum):
     created = "created"
     uploaded = "uploaded"
+    extracting_audio = "extracting_audio"
+    extracting_frames = "extracting_frames"
+    transcribing = "transcribing"
+    analyzing_emotions = "analyzing_emotions"
+    fusion_pending = "fusion_pending"
+    fusing = "fusing"
     processing = "processing"
     analysis_complete = "analysis_complete"
     reviewed = "reviewed"
+    upload_failed = "upload_failed"
 
 
 class Modality(str, enum.Enum):
@@ -55,6 +62,7 @@ class User(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False, default="Clinician")
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), nullable=False)
 
@@ -88,6 +96,19 @@ class Session(TimestampMixin, Base):
     )
     consent_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
+    processing_steps: Mapped[dict] = mapped_column(
+        JSONB,
+        default=lambda: {
+            "video_uploaded": False,
+            "audio_extracted": False,
+            "frames_extracted": False,
+            "transcript_generated": False,
+            "emotion_analysis_complete": False,
+            "fusion_complete": False,
+        },
+        nullable=False,
+    )
+    processing_error: Mapped[str | None] = mapped_column(Text)
 
     patient: Mapped["Patient"] = relationship(back_populates="sessions")
     uploaded_video: Mapped["UploadedVideo | None"] = relationship(

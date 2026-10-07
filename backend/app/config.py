@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     upload_dir: str = "uploads"
+    models_dir: str = "models"
+    whisper_model_size: str = "small"
 
     class Config:
         env_file = ".env"

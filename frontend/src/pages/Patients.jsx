@@ -5,6 +5,9 @@ import { createPatient, listPatients } from '../services/patients'
 export default function Patients() {
   const [patients, setPatients] = useState([])
   const [open, setOpen] = useState(false)
+  const [fullName, setFullName] = useState('')
+  const [age, setAge] = useState('')
+  const [profession, setProfession] = useState('')
   const [ageRange, setAgeRange] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
@@ -31,8 +34,15 @@ export default function Patients() {
 
   async function submit(event) {
     event.preventDefault()
+    if (!fullName.trim() && !age && !profession.trim() && !ageRange.trim() && !notes.trim()) {
+      setError('Enter at least one patient detail before creating a patient.')
+      return
+    }
     try {
-      await createPatient({ basic_info_json: { age_range: ageRange, notes } })
+      await createPatient({ full_name: fullName || null, age: age ? Number(age) : null, profession: profession || null, basic_info_json: { age_range: ageRange, notes } })
+      setFullName('')
+      setAge('')
+      setProfession('')
       setAgeRange('')
       setNotes('')
       setOpen(false)
@@ -53,9 +63,12 @@ export default function Patients() {
       {patients.length === 0 ? <div className="empty-state">No patients yet. Add your first patient to begin.</div> : (
         <div className="patient-grid">{patients.map((patient) => <PatientCard key={patient.id} patient={patient} />)}</div>
       )}
-      {open && <div className="modal-backdrop"><form className="modal" onSubmit={submit}>
+      {open && <div className="modal-backdrop" role="dialog" aria-modal="true"><form className="modal" onSubmit={submit}>
         <h2>New patient</h2>
         <p className="muted">Optional information only. No legal name is required.</p>
+        <label>Full name<input value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
+        <label>Age<input type="number" min="0" value={age} onChange={(event) => setAge(event.target.value)} /></label>
+        <label>Profession<input value={profession} onChange={(event) => setProfession(event.target.value)} /></label>
         <label>Age range<input value={ageRange} onChange={(event) => setAgeRange(event.target.value)} placeholder="25-34" /></label>
         <label>Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows="4" /></label>
         <div className="modal-actions"><button type="button" className="button" onClick={() => setOpen(false)}>Cancel</button><button className="button primary">Create patient</button></div>

@@ -1,20 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, Circle, Download, Loader2 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { getSession } from '../services/sessions'
+import { getSession, getSessionAnalysis, getSessionStatus, getSessionTimeline, getSessionDivergences, getSessionSummary, getTranscript, downloadSessionReport } from '../services/sessions'
+import EmotionDistribution from '../components/EmotionDistribution'
+import EmotionTimeline from '../components/EmotionTimeline'
+import ModalityComparison from '../components/ModalityComparison'
+import TranscriptPanel from '../components/TranscriptPanel'
+import DivergenceStrip from '../components/DivergenceStrip'
 
+const TERMINAL_STATUSES = new Set(['analysis_complete', 'reviewed', 'upload_failed'])
 export default function SessionProfile() {
-  const { id } = useParams()
-  const [session, setSession] = useState(null)
-  const [error, setError] = useState('')
-
+  const { id } = useParams(); const [session, setSession] = useState(null); const [processing, setProcessing] = useState(null); const [transcript, setTranscript] = useState(null); const [analysis, setAnalysis] = useState(null); const [timeline, setTimeline] = useState(null); const [divergences, setDivergences] = useState([]); const [summary, setSummary] = useState(''); const [selected, setSelected] = useState(null); const [error, setError] = useState(''); const [downloading, setDownloading] = useState(false); const transcriptRequested = useRef(false)
   useEffect(() => {
-    getSession(id).then(setSession).catch((err) => setError(err.message))
-  }, [id])
-
+    let cancelled = false
+    const loadStatus = () => getSessionStatus(id).then((status) => { if (cancelled) return status; setProcessing(status); if (!transcriptRequested.current && status.processing_steps?.transcript_generated) { transcriptRequested.current = true; getTranscript(id).then(setTranscript).catch(() => { transcriptRequested.current = false }) }; if (status.processing_steps?.emotion_analysis_complete && !analysis) getSessionAnalysis(id).then(setAnalysis).catch((err) => setError(err.message)); if (status.processing_steps?.fusion_complete && !timeline) getSessionTimeline(id).then((data) => { setTimeline(data); setSelected(data.slice().sort((a, b) => b.confidence - a.confidence)[0] || null) }).catch((err) => setError(err.message)); if (status.processing_steps?.fusion_complete && !summary) getSessionSummary(id).then((data) => setSummary(data.summary)).catch((err) => setError(err.message)); if (status.processing_steps?.fusion_complete) getSessionDivergences(id).then(setDivergences).catch((err) => setError(err.message)); return status }).catch((err) => { if (!cancelled) setError(err.message); return null })
+    getSession(id).then(setSession).catch((err) => setError(err.message)); const interval = window.setInterval(async () => { const status = await loadStatus(); if (status && TERMINAL_STATUSES.has(status.status)) window.clearInterval(interval) }, 2000); return () => { cancelled = true; window.clearInterval(interval) }
+  }, [id, analysis, summary, timeline])
+  async function download() { setDownloading(true); try { const blob = await downloadSessionReport(id); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `session-${id}-analysis.pdf`; anchor.click(); URL.revokeObjectURL(url) } catch (err) { setError(err.message) } finally { setDownloading(false) } }
   if (error) return <main className="page"><p className="error">{error}</p></main>
   if (!session) return <main className="page"><p className="muted">Loading session...</p></main>
-  return <main className="page">
-    <Link className="back-link" to="/patients">← Patients</Link>
-    <section className="info-card session-placeholder"><span className="eyebrow">Session</span><h1>Session #{session.id}</h1><p className="status-line">Status: <strong>{session.status}</strong></p><p className="muted">The analysis dashboard will be available in a future phase.</p></section>
-  </main>
+  const steps = processing?.processing_steps || {}; const complete = processing?.status === 'analysis_complete'
+  return <main className="page"><Link className="back-link" to="/patients">← Patients</Link><header className="profile-header"><div><span className="eyebrow">Session profile · {session.session_date}</span><h1>Session #{session.id}</h1><p className="muted">{session.duration_seconds ? `${Math.round(session.duration_seconds / 60)} minute session` : 'Duration pending'} · {session.session_type}</p></div>{complete && <button className="button primary" onClick={download} disabled={downloading}><Download size={16} />{downloading ? 'Generating…' : 'Download PDF report'}</button>}</header>
+    {!complete && <section className="info-card"><p className="status-line">Status: <strong>{processing?.status || session.status}</strong></p><div className="processing-checklist"><ProcessingStep label="Video uploaded" complete={steps.video_uploaded} /><ProcessingStep label="Audio extracted" complete={steps.audio_extracted} active={processing?.status === 'extracting_audio'} /><ProcessingStep label="Frames extracted" complete={steps.frames_extracted} active={processing?.status === 'extracting_frames'} /><ProcessingStep label="Transcript generation" complete={steps.transcript_generated} active={processing?.status === 'transcribing'} /><ProcessingStep label="Emotion analysis" complete={steps.emotion_analysis_complete} active={processing?.status === 'analyzing_emotions'} /><ProcessingStep label="Multimodal fusion" complete={steps.fusion_complete} active={processing?.status === 'fusing'} /></div></section>}
+    {complete && timeline && <>{summary && <section className="summary-callout"><span className="eyebrow">AI-Generated Summary</span><p>{summary}</p><small>Based on detected model signals. Not a clinical interpretation.</small></section>}<div className="visual-grid"><EmotionDistribution timeline={timeline} /><ModalityComparison selected={selected} analysis={analysis || []} /></div><DivergenceStrip timeline={timeline} divergences={divergences} onSelect={setSelected} /><EmotionTimeline timeline={timeline} onSelect={setSelected} /></>}{transcript && <TranscriptPanel transcript={transcript} />}</main>
 }
+function ProcessingStep({ label, complete = false, active = false }) { const Icon = complete ? Check : active ? Loader2 : Circle; return <div className={`processing-step ${active ? 'active' : ''}`}><Icon size={18} className={active ? 'spin' : ''} /><span>{label}</span></div> }

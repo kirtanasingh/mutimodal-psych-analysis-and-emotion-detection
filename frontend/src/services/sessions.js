@@ -8,6 +8,36 @@ export function getSession(id) {
   return apiRequest(`/api/sessions/${id}`)
 }
 
+export function getSessionStatus(id) {
+  return apiRequest(`/api/sessions/${id}/status`)
+}
+
+export function getTranscript(id) {
+  return apiRequest(`/api/sessions/${id}/transcript`)
+}
+
+export function getSessionAnalysis(id) {
+  return apiRequest(`/api/sessions/${id}/analysis`)
+}
+
+export function getSessionTimeline(id) {
+  return apiRequest(`/api/sessions/${id}/timeline`)
+}
+
+export function getSessionDivergences(id) {
+  return apiRequest(`/api/sessions/${id}/divergences`)
+}
+
+export function getSessionSummary(id) {
+  return apiRequest(`/api/sessions/${id}/summary`)
+}
+
+export async function downloadSessionReport(id) {
+  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/sessions/${id}/report/pdf`, { headers: getAuthHeaders() })
+  if (!response.ok) throw new Error('Unable to generate report')
+  return response.blob()
+}
+
 export function uploadSessionVideo(id, file, onProgress) {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest()
